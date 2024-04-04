@@ -1,25 +1,18 @@
 
+from pathlib import Path
+
 import cv2
 import numpy as np
-import os
-from pathlib import Path
-from PIL import Image
 import pytorch_lightning as pl
-import sys
 import torch
+from PIL import Image
 
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 pl.seed_everything(42)
-src_dir = os.path.join(CURRENT_DIR, '..', '..', 'src')
-map_dir = os.path.join(CURRENT_DIR, '..', '..', 'map_data')
-sys.path.append(src_dir)
-sys.path.append(map_dir)
 
 from models.autoencoder import Autoencoder
 from modules.planners import DifferentiableDiagAstar
 
-def resize_image(image, resolution):
+def resize_and_pad_image(image, resolution):
     img = Image.fromarray(image)
     original_width, original_height = img.size
     aspect_ratio = original_width / original_height
@@ -35,33 +28,51 @@ def resize_image(image, resolution):
     padded_img = Image.new("L", resolution, color="black")
     padded_img.paste(img, ((resolution[0] - new_width) // 2, (resolution[1] - new_height) // 2))
     padded_img = padded_img.point(lambda x: 1 if x > 0 else 0)
-    return np.asarray(padded_img)
 
-def load_image_tensor(file_path, resolution):
+    padding = (padded_img.width - img.width, padded_img.height - img.height)
+    img = np.asarray(padded_img)
+
+    return img, padding
+
+def unpad_and_resize_image(image, padding, resolution):
+    img = Image.fromarray(image)
+    width, height = resolution
+
+    cropped_img = img.crop((padding[0] / 2, padding[1] / 2, img.width - padding[0] / 2, img.height - padding[1] / 2))
+    resized_img = cropped_img.resize((width, height), Image.Resampling.LANCZOS)
+
+    return np.asarray(resized_img)
+
+def create_input_tensor(file_path, resolution):
     image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
-    image = resize_image(image, resolution)
+    image, _ = resize_and_pad_image(image, resolution)
     tensor = torch.tensor(image, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+
     return tensor
 
-def transform_plan(image):
-    result = torch.ones_like(image)
-    result[image[:, :, 0] == 1] = torch.tensor([0.1, 0.1, 0.1])
-    result[image[:, :, 1] == 1] = torch.tensor([1., 0., 0])
-    result[image[:, :, 2] == 1] = torch.tensor([0., 1, 0.])
-    return result
+def create_output_tensor(image, padding, resolution):
+    dtype = image.dtype
+    image = image[0, 0].cpu().numpy()
+    image = unpad_and_resize_image(image, padding, resolution)
+    image = torch.tensor(image, dtype=dtype).unsqueeze(0).unsqueeze(0)
 
-def infer_path(
-    pathfinding_method = 'f',
-    model_resolution = (64, 64),
-    img_resolution = (512, 512),
-    goal_path = 'example/mw/goal.png',
-    map_path = 'example/mw/map.png',
-    start_path = 'example/mw/start.png',
-    weights_path = 'weights/focal.pth'
-):
-    goal = load_image_tensor(goal_path, resolution = img_resolution)
-    map_design = load_image_tensor(map_path, resolution = img_resolution)
-    start = load_image_tensor(start_path, resolution = img_resolution)
+    return image
+
+def infer_path(pathfinding_method = 'f',
+               model_resolution = (64, 64),
+               img_resolution = (512, 512),
+               goal_path = 'example/mw/goal.png',
+               map_path = 'example/mw/map.png',
+               start_path = 'example/mw/start.png',
+               weights_path = 'weights/focal.pth'
+               ):
+
+    orig_resolution = Image.open(map_path).size
+    _, padding = resize_and_pad_image(cv2.imread(map_path, cv2.IMREAD_GRAYSCALE), img_resolution)
+
+    goal = create_input_tensor(goal_path, resolution = img_resolution)
+    map_design = create_input_tensor(map_path, resolution = img_resolution)
+    start = create_input_tensor(start_path, resolution = img_resolution)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     weights = torch.load(weights_path, map_location = device)
@@ -103,7 +114,7 @@ def infer_path(
 
     else:
         raise ValueError("Invalid pathfinding_method value. Choose from 'f', 'fw100', 'cf', 'w2', 'vanilla'.")
-    
+
     with torch.no_grad():
         if model:
             pred = (model(inputs) + 1) / 2
@@ -115,6 +126,27 @@ def infer_path(
             goal,
             (map_design == 0) * 1.
         )
+
+    map_design = create_output_tensor(image=map_design.to(torch.uint8),
+                                      padding=padding,
+                                      resolution=orig_resolution
+                                      )
+    outputs.g = create_output_tensor(image=outputs.g.to(torch.float32),
+                                     padding=padding,
+                                     resolution=orig_resolution
+                                     )
+    outputs.paths = create_output_tensor(image=outputs.paths.to(torch.uint8),
+                                         padding=padding,
+                                         resolution=orig_resolution
+                                         )
+    outputs.histories = create_output_tensor(image=outputs.histories.to(torch.float32),
+                                             padding=padding,
+                                             resolution=orig_resolution
+                                             )
+    pred = create_output_tensor(image=pred.to(torch.float32),
+                                padding=padding,
+                                resolution=orig_resolution
+                                )
 
     return {
         'map_design': map_design,
