@@ -31,7 +31,7 @@ setup(
     python_requires = PYTHON_VERSION,
     packages = find_packages(),
     package_data = {
-        'data': ['models/weights/*.pth']
+        'src': ['models/weights/*.pth']
     },
     install_requires = required_packages,
     classifiers = [
