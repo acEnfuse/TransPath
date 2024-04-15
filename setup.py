@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 # Package metadata
-NAME = 'trans_path_enfuse'
+NAME = 'transpath'
 VERSION = '1.0.5'
 DESCRIPTION = 'Enfuse implementation of TransPath model from AIRI'
 AUTHOR = 'Enfuse.io'
@@ -31,7 +31,7 @@ setup(
     python_requires = PYTHON_VERSION,
     packages = find_packages(),
     package_data = {
-        'transpath': ['models/weights/*.pth']
+        'data': ['models/weights/*.pth']
     },
     install_requires = required_packages,
     classifiers = [
