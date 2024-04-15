@@ -30,7 +30,7 @@ setup(
     license = LICENSE,
     python_requires = PYTHON_VERSION,
     packages = find_packages(where='src'),
-    package_dir = {'': 'src'},
+    package_dir = {'transpath': 'src'},
     install_requires = required_packages,
     classifiers = [
         'Development Status :: 4 - Production/Beta',
