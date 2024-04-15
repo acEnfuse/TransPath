@@ -173,10 +173,10 @@ def create_output_tensor(image: torch.Tensor, padding: Tuple[int, int], resoluti
 def get_path(map: Union[str, np.ndarray],
              start: Union[str, np.ndarray],
              goal: Union[str, np.ndarray],
+             weights_filepath: Union[str, Image],
              pathfinding_method: str ='f',
              model_resolution: Tuple = (64, 64),
-             img_resolution: Tuple = (512, 512),
-             weights_filepath: Union[str, Image] = './weights/focal.pth'
+             img_resolution: Tuple = (512, 512)
              ):
     """
     Generate pathfinding results based on input map, start, and goal images using an autoencoder-based approach.
@@ -202,7 +202,7 @@ def get_path(map: Union[str, np.ndarray],
         Resolution of the input images, by default (512, 512).
 
     weights_filepath : Union[str, Image], optional
-        Path to the weights file or the weights image, by default './weights/focal.pth'.
+        Path to the weights file.
 
     Returns
     -------
