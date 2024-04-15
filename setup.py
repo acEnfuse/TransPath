@@ -31,7 +31,7 @@ setup(
     python_requires = PYTHON_VERSION,
     packages = find_packages(),
     package_data = {
-        'src': ['models/weights/*.pth']
+        'transpath': ['src/models/weights/*.pth']
     },
     install_requires = required_packages,
     classifiers = [
