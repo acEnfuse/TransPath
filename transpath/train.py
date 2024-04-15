@@ -1,15 +1,17 @@
 import argparse
 import os
+from pathlib import Path
 from typing import Union
+
 import pytorch_lightning as pl
 import torch
 import wandb
 from dotenv import load_dotenv
 from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import DataLoader
-from pathlib import Path
-from data.hmaps import GridData
-from models.autoencoder import Autoencoder, PathLogger
+
+from .data.hmaps import GridData
+from .models.autoencoder import Autoencoder, PathLogger
 
 load_dotenv()
 

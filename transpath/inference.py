@@ -20,8 +20,8 @@ from PIL import Image
 
 pl.seed_everything(42)
 
-from models.autoencoder import Autoencoder
-from modules.planners import DifferentiableDiagAstar
+from .models.autoencoder import Autoencoder
+from .modules.planners import DifferentiableDiagAstar
 
 
 def parse_args():
