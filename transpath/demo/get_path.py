@@ -69,14 +69,14 @@ def main(args):
         target_size_x = args.target_size_x, 
         target_size_y = args.target_size_y
     )
-    results = inf.infer_path(
+    results = inf.get_path(
         pathfinding_method = args.pathfinding_method,
         model_resolution = (64, 64),
         img_resolution = (args.target_size_x, args.target_size_y),
-        goal_path = 'map_data/goal_map.png',
-        map_path = 'map_data/rescaled_map.png',
-        start_path = 'map_data/start_map.png',
-        weights_path = 'transpath/weights/focal.pth'
+        goal='map_data/goal_map.png',
+        map='map_data/rescaled_map.png',
+        start='map_data/start_map.png',
+        weights_filepath='transpath/weights/focal.pth'
     )
     generate_map_with_path(
         start_point = (args.start_point_x, args.start_point_y), 

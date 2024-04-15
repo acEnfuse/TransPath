@@ -12,7 +12,7 @@ from data.hmaps import GridData
 from models.autoencoder import Autoencoder, PathLogger
 
 load_dotenv()
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 def main(mode, run_name, proj_name, batch_size, max_epochs, img_size, ckpt_path=None):
     train_data = GridData(

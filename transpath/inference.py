@@ -1,5 +1,15 @@
+"""
+Module to generate pathfinding results using an autoencoder-based approach.
+
+This module provides functions to generate pathfinding results based on input map, start, and goal images
+using an autoencoder-based approach.
+
+Author: Ashwin Sakhare
+
+"""
 
 from pathlib import Path
+from typing import Union, Tuple
 
 import cv2
 import numpy as np
@@ -12,7 +22,25 @@ pl.seed_everything(42)
 from models.autoencoder import Autoencoder
 from modules.planners import DifferentiableDiagAstar
 
-def resize_and_pad_image(image, resolution):
+def resize_and_pad_image(image: np.ndarray, resolution: Tuple[int, int]) -> Tuple[np.ndarray, Tuple[int, int]]:
+    """
+    Resize and pad the input image to match the specified resolution.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Input image as a numpy array.
+
+    resolution : Tuple[int, int]
+        Desired resolution (width, height).
+
+    Returns
+    -------
+    Tuple[np.ndarray, Tuple[int, int]]
+        Resized and padded image and padding applied.
+
+    """
+
     img = Image.fromarray(image)
     original_width, original_height = img.size
     aspect_ratio = original_width / original_height
@@ -30,27 +58,94 @@ def resize_and_pad_image(image, resolution):
     padded_img = padded_img.point(lambda x: 1 if x > 0 else 0)
 
     padding = (padded_img.width - img.width, padded_img.height - img.height)
+
+    assert padding[0] % 2 == 0, "Width padding is not multiple of 2"
+    assert padding[1] % 2 == 0, "Height padding is not multiple of 2"
+
     img = np.asarray(padded_img)
 
     return img, padding
 
-def unpad_and_resize_image(image, padding, resolution):
+def unpad_and_resize_image(image: np.ndarray, padding: Tuple[int, int], resolution: Tuple[int, int]) -> np.ndarray:
+    """
+    Unpad and resize the input image based on the given padding and resolution.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Input image as a numpy array.
+
+    padding : Tuple[int, int]
+        Padding applied to the image.
+
+    resolution : Tuple[int, int]
+        Desired resolution (width, height).
+
+    Returns
+    -------
+    np.ndarray
+        Unpadded and resized image.
+
+    """
+
     img = Image.fromarray(image)
     width, height = resolution
 
-    cropped_img = img.crop((padding[0] / 2, padding[1] / 2, img.width - padding[0] / 2, img.height - padding[1] / 2))
+    cropped_img = img.crop((int(padding[0] / 2),
+                            int(padding[1] / 2),
+                            int(img.width - padding[0] / 2),
+                            int(img.height - padding[1] / 2)
+                            ))
     resized_img = cropped_img.resize((width, height), Image.Resampling.LANCZOS)
 
     return np.asarray(resized_img)
 
-def create_input_tensor(file_path, resolution):
-    image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+def create_input_tensor(image: np.ndarray, resolution: Tuple[int, int]) -> torch.Tensor:
+    """
+    Create a torch tensor from the input image with the specified resolution.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Input image as a numpy array.
+
+    resolution : Tuple[int, int]
+        Desired resolution (width, height).
+
+    Returns
+    -------
+    torch.Tensor
+        Input tensor.
+
+    """
+
+    dtype = image.dtype
     image, _ = resize_and_pad_image(image, resolution)
-    tensor = torch.tensor(image, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+    tensor = torch.tensor(image, dtype=dtype).unsqueeze(0).unsqueeze(0)
 
     return tensor
 
-def create_output_tensor(image, padding, resolution):
+def create_output_tensor(image: torch.Tensor, padding: Tuple[int, int], resolution: Tuple[int, int]) -> torch.Tensor:
+    """
+    Create a torch tensor from the output image with the specified padding and resolution.
+
+    Parameters
+    ----------
+    image : torch.Tensor
+        Output image as a torch tensor.
+
+    padding : Tuple[int, int]
+        Padding applied to the image.
+
+    resolution : Tuple[int, int]
+        Original resolution (width, height).
+
+    Returns
+    -------
+    torch.Tensor
+        Output tensor.
+    """
+
     dtype = image.dtype
     image = image[0, 0].cpu().numpy()
     image = unpad_and_resize_image(image, padding, resolution)
@@ -58,25 +153,68 @@ def create_output_tensor(image, padding, resolution):
 
     return image
 
-def infer_path(pathfinding_method = 'f',
-               model_resolution = (64, 64),
-               img_resolution = (512, 512),
-               goal_path = 'example/mw/goal.png',
-               map_path = 'example/mw/map.png',
-               start_path = 'example/mw/start.png',
-               weights_path = 'weights/focal.pth'
-               ):
+def get_path(map: Union[str, np.ndarray],
+             start: Union[str, np.ndarray],
+             goal: Union[str, np.ndarray],
+             pathfinding_method: str ='f',
+             model_resolution: Tuple = (64, 64),
+             img_resolution: Tuple = (512, 512),
+             weights_filepath: Union[str, Image] = './weights/focal.pth'
+             ):
+    """
+    Generate pathfinding results based on input map, start, and goal images using an autoencoder-based approach.
 
-    orig_resolution = Image.open(map_path).size
-    _, padding = resize_and_pad_image(cv2.imread(map_path, cv2.IMREAD_GRAYSCALE), img_resolution)
+    Parameters
+    ----------
+    map : Union[str, np.ndarray]
+        Path to the map image file or the map image as a numpy array.
 
-    goal = create_input_tensor(goal_path, resolution = img_resolution)
-    map_design = create_input_tensor(map_path, resolution = img_resolution)
-    start = create_input_tensor(start_path, resolution = img_resolution)
+    start : Union[str, np.ndarray]
+        Path to the start image file or the start image as a numpy array.
+
+    goal : Union[str, np.ndarray]
+        Path to the goal image file or the goal image as a numpy array.
+
+    pathfinding_method : str, optional
+        Method for pathfinding, by default 'f'.
+
+    model_resolution : Tuple[int, int], optional
+        Resolution of the autoencoder model, by default (64, 64).
+
+    img_resolution : Tuple[int, int], optional
+        Resolution of the input images, by default (512, 512).
+
+    weights_filepath : Union[str, Image], optional
+        Path to the weights file or the weights image, by default './weights/focal.pth'.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the map design, outputs, and prediction.
+
+    """
+
+    if isinstance(map, str):
+        map = cv2.imread(map, cv2.IMREAD_GRAYSCALE)
+
+    if isinstance(start, str):
+        start = cv2.imread(start, cv2.IMREAD_GRAYSCALE)
+
+    if isinstance(goal, str):
+        goal = cv2.imread(goal, cv2.IMREAD_GRAYSCALE)
+
+    assert map.shape == start.shape == goal.shape, "Dimension mismatch between map, start, and goal"
+
+    orig_resolution = Image.fromarray(map).size
+    _, padding = resize_and_pad_image(map, img_resolution)
+
+    goal = create_input_tensor(goal, resolution = img_resolution)
+    map_design = create_input_tensor(map, resolution = img_resolution)
+    start = create_input_tensor(start, resolution = img_resolution)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    weights = torch.load(weights_path, map_location = device)
-    weights = weights['state_dict'] if Path(weights_path).suffix == '.ckpt' else weights
+    weights = torch.load(weights_filepath, map_location = device)
+    weights = weights['state_dict'] if Path(weights_filepath).suffix == '.ckpt' else weights
 
     model = None
     inputs = None
@@ -155,4 +293,4 @@ def infer_path(pathfinding_method = 'f',
     }
 
 if __name__ == "__main__":
-    infer_path()
+    pass
