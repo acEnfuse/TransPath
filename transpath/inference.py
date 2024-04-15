@@ -20,8 +20,8 @@ from PIL import Image
 
 pl.seed_everything(42)
 
-from .models.autoencoder import Autoencoder
-from .modules.planners import DifferentiableDiagAstar
+from transpath.models.autoencoder import Autoencoder
+from transpath.modules.planners import DifferentiableDiagAstar
 
 
 def parse_args():
@@ -29,13 +29,39 @@ def parse_args():
     Parse command-line arguments.
     """
     parser = argparse.ArgumentParser(description="Generate pathfinding results using an autoencoder-based approach.")
-    parser.add_argument("--map", required=True, help="Path to the map image file or the map image as a numpy array.")
-    parser.add_argument("--start", required=True, help="Path to the start image file or the start image as a numpy array.")
-    parser.add_argument("--goal", required=True, help="Path to the goal image file or the goal image as a numpy array.")
-    parser.add_argument("--method", default='f', choices=['f', 'fw100', 'cf', 'w2', 'vanilla'], help="Method for pathfinding.")
-    parser.add_argument("--model_resolution", nargs=2, type=int, default=[64, 64], help="Resolution of the autoencoder model.")
-    parser.add_argument("--img_resolution", nargs=2, type=int, default=[512, 512], help="Resolution of the input images.")
-    parser.add_argument("--weights_filepath", default='./weights/focal.pth', help="Path to the weights file or the weights image.")
+    parser.add_argument("--map",
+                        default='./example/mw/map.png',
+                        help="Path to the map image file or the map image as a numpy array."
+                        )
+    parser.add_argument("--start",
+                        default='./example/mw/start.png',
+                        help="Path to the start image file or the start image as a numpy array."
+                        )
+    parser.add_argument("--goal",
+                        default='./example/mw/goal.png',
+                        help="Path to the goal image file or the goal image as a numpy array."
+                        )
+    parser.add_argument("--method",
+                        default='f',
+                        choices=['f', 'fw100', 'cf', 'w2', 'vanilla'],
+                        help="Method for pathfinding."
+                        )
+    parser.add_argument("--model_resolution",
+                        nargs=2,
+                        type=int,
+                        default=[64, 64],
+                        help="Resolution of the autoencoder model."
+                        )
+    parser.add_argument("--img_resolution",
+                        nargs=2,
+                        type=int,
+                        default=[512, 512],
+                        help="Resolution of the input images."
+                        )
+    parser.add_argument("--weights_filepath",
+                        default='./weights/focal.pth',
+                        help="Path to the weights file or the weights image."
+                        )
 
     return parser.parse_args()
 
@@ -69,15 +95,23 @@ def resize_and_pad_image(image: np.ndarray, resolution: Tuple[int, int]) -> Tupl
         new_height = resolution[1]
         new_width = round(new_height * aspect_ratio)
 
+    # Resize without modifying the pixel values
     img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+    # Create a new black image of the desired resolution
     padded_img = Image.new("L", resolution, color="black")
-    padded_img.paste(img, ((resolution[0] - new_width) // 2, (resolution[1] - new_height) // 2))
+
+    # Calculate the position to paste the resized image
+    paste_position = ((resolution[0] - new_width) // 2, (resolution[1] - new_height) // 2)
+
+    # Paste the resized image onto the padded image
+    padded_img.paste(img, paste_position)
+
+    # Convert to binary image preserving the pixel values
     padded_img = padded_img.point(lambda x: 1 if x > 0 else 0)
 
+    # Calculate padding
     padding = (padded_img.width - img.width, padded_img.height - img.height)
-
-    assert padding[0] % 2 == 0, "Width padding is not multiple of 2"
-    assert padding[1] % 2 == 0, "Height padding is not multiple of 2"
 
     img = np.asarray(padded_img)
 
@@ -108,10 +142,10 @@ def unpad_and_resize_image(image: np.ndarray, padding: Tuple[int, int], resoluti
     img = Image.fromarray(image)
     width, height = resolution
 
-    cropped_img = img.crop((int(padding[0] / 2),
-                            int(padding[1] / 2),
-                            int(img.width - padding[0] / 2),
-                            int(img.height - padding[1] / 2)
+    cropped_img = img.crop((padding[0] // 2,
+                            padding[1] // 2,
+                            round(img.width - padding[0] / 2),
+                            round(img.height - padding[1] / 2)
                             ))
     resized_img = cropped_img.resize((width, height), Image.Resampling.LANCZOS)
 
