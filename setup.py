@@ -29,8 +29,10 @@ setup(
     url = URL,
     license = LICENSE,
     python_requires = PYTHON_VERSION,
-    packages = find_packages(where='transpath'),
-    package_dir = {'transpath': 'transpath'},
+    packages = find_packages(),
+    package_data = {
+        'transpath': ['weights/*.pth']
+    },
     install_requires = required_packages,
     classifiers = [
         'Development Status :: 4 - Production/Beta',
