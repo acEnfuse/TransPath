@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 # Package metadata
 NAME = 'transpath'
-VERSION = '1.0.5'
+VERSION = '1.0.0'
 DESCRIPTION = 'Enfuse implementation of TransPath model from AIRI'
 AUTHOR = 'Enfuse.io'
 EMAIL = 'asakhare@zdatainc.com'
@@ -29,10 +29,8 @@ setup(
     url = URL,
     license = LICENSE,
     python_requires = PYTHON_VERSION,
-    packages = find_packages(),
-    package_data = {
-        'transpath': ['src/models/weights/*.pth']
-    },
+    packages = find_packages(where='src'),
+    package_dir = {'': 'src'},
     install_requires = required_packages,
     classifiers = [
         'Development Status :: 4 - Production/Beta',
