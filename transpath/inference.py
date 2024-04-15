@@ -136,9 +136,8 @@ def create_input_tensor(image: np.ndarray, resolution: Tuple[int, int]) -> torch
 
     """
 
-    dtype = image.dtype
     image, _ = resize_and_pad_image(image, resolution)
-    tensor = torch.tensor(image, dtype=dtype).unsqueeze(0).unsqueeze(0)
+    tensor = torch.from_numpy(image).unsqueeze(0).unsqueeze(0)
 
     return tensor
 
@@ -161,6 +160,7 @@ def create_output_tensor(image: torch.Tensor, padding: Tuple[int, int], resoluti
     -------
     torch.Tensor
         Output tensor.
+
     """
 
     dtype = image.dtype
