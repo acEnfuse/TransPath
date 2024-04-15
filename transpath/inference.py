@@ -8,6 +8,7 @@ Author: Ashwin Sakhare
 
 """
 
+import argparse
 from pathlib import Path
 from typing import Union, Tuple
 
@@ -21,6 +22,22 @@ pl.seed_everything(42)
 
 from models.autoencoder import Autoencoder
 from modules.planners import DifferentiableDiagAstar
+
+
+def parse_args():
+    """
+    Parse command-line arguments.
+    """
+    parser = argparse.ArgumentParser(description="Generate pathfinding results using an autoencoder-based approach.")
+    parser.add_argument("--map", required=True, help="Path to the map image file or the map image as a numpy array.")
+    parser.add_argument("--start", required=True, help="Path to the start image file or the start image as a numpy array.")
+    parser.add_argument("--goal", required=True, help="Path to the goal image file or the goal image as a numpy array.")
+    parser.add_argument("--method", default='f', choices=['f', 'fw100', 'cf', 'w2', 'vanilla'], help="Method for pathfinding.")
+    parser.add_argument("--model_resolution", nargs=2, type=int, default=[64, 64], help="Resolution of the autoencoder model.")
+    parser.add_argument("--img_resolution", nargs=2, type=int, default=[512, 512], help="Resolution of the input images.")
+    parser.add_argument("--weights_filepath", default='./weights/focal.pth', help="Path to the weights file or the weights image.")
+
+    return parser.parse_args()
 
 def resize_and_pad_image(image: np.ndarray, resolution: Tuple[int, int]) -> Tuple[np.ndarray, Tuple[int, int]]:
     """
@@ -293,4 +310,13 @@ def get_path(map: Union[str, np.ndarray],
     }
 
 if __name__ == "__main__":
-    pass
+    args = parse_args()
+
+    result = get_path(map=args.map,
+                      start=args.start,
+                      goal=args.goal,
+                      pathfinding_method=args.method,
+                      model_resolution=(args.model_resolution[0], args.model_resolution[1]),
+                      img_resolution=(args.img_resolution[0], args.img_resolution[1]),
+                      weights_filepath=args.weights_filepath
+                      )
