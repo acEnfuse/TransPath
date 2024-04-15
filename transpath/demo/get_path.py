@@ -6,11 +6,11 @@ import sys
 import torch
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-src_dir = os.path.join(CURRENT_DIR, '..', '..', 'src')
+src_dir = os.path.join(CURRENT_DIR, '..', '..', 'transpath')
 sys.path.append(src_dir)
 
 from utils import bw_map_data_generator as map_gen
-from utils import inference as inf
+import transpath.inference as inf
 
 def generate_map_with_path(start_point, goal_point, results, file_name):
     start_x, start_y = start_point
@@ -76,7 +76,7 @@ def main(args):
         goal_path = 'map_data/goal_map.png',
         map_path = 'map_data/rescaled_map.png',
         start_path = 'map_data/start_map.png',
-        weights_path = 'src/weights/focal.pth'
+        weights_path = 'transpath/weights/focal.pth'
     )
     generate_map_with_path(
         start_point = (args.start_point_x, args.start_point_y), 

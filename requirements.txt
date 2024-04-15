@@ -1,8 +1,8 @@
-numpy
-torch
-torchvision
-pytorch_lightning
-einops
-matplotlib
-wandb
-tqdm
+numpy>=1.26.4
+torch>=2.2.1
+torchvision>=0.17.1
+pytorch_lightning>=2.2.1
+einops>=0.7.0
+matplotlib>=3.8.1
+wandb>=0.16.4
+tqdm>=4.66.2

@@ -9,8 +9,8 @@ import sys
 sys.path.append('../..')
 import torch
 
-from src.models.autoencoder_for_notebook import Autoencoder
-from src.modules.planners import DifferentiableDiagAstar
+from transpath.models.autoencoder_for_notebook import Autoencoder
+from transpath.modules.planners import DifferentiableDiagAstar
 
 def load_image_tensor(file_path):
     image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)

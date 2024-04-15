@@ -5,10 +5,10 @@ import pytorch_lightning as pl
 import sys
 sys.path.append('../..')
 
-from src.modules.encoder import Encoder
-from src.modules.decoder import Decoder
-from src.modules.attention_for_notebooks import SpatialTransformer
-from src.modules.pos_emb import PosEmbeds
+from transpath.modules.encoder import Encoder
+from transpath.modules.decoder import Decoder
+from transpath.modules.attention_for_notebooks import SpatialTransformer
+from transpath.modules.pos_emb import PosEmbeds
 
 
 def base_loss(criterion, na_outputs, va_outputs):

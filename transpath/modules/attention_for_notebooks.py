@@ -7,7 +7,7 @@ from einops import rearrange, repeat
 import sys
 sys.path.append('../..')
 
-from src.utils.checkpoint import checkpoint
+from transpath.utils.checkpoint import checkpoint
 
 
 def default(val, d):
