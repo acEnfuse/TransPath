@@ -3,10 +3,10 @@ import numpy as np
 
 
 def visualize(result):
-    img = np.asarray(result['map_design'][0, 0].cpu().numpy())
+    img = np.asarray(result['map'][0, 0].cpu().numpy())
     img = np.repeat(img[:, :, np.newaxis], 3, axis=2)
 
-    overlay = result['outputs'].paths[0, 0].cpu().numpy() * 255
+    overlay = result['planner_outputs'].paths[0, 0].cpu().numpy() * 255
     overlay = np.repeat(overlay[:, :, np.newaxis], 3, axis=2)
 
     # Replace white pixels with red (set the red channel to 255)

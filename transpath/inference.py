@@ -338,10 +338,20 @@ def get_path(map: Union[str, np.ndarray],
                                 resolution=orig_resolution
                                 )
 
+    # Get path mask
+    path_mask =  result['outputs'].paths[0, 0].cpu().numpy()
+
+    # Get the indices where the array is equal to 1
+    path_indices = np.where(path_mask == 1)
+
+    # Convert indices to a list of tuples
+    path = list(zip(path_indices[0], path_indices[1]))
+
     return {
-        'map_design': map_design,
-        'outputs': outputs,
-        'prediction': pred
+        'path': path,
+        'map': map_design,
+        'planner_outputs': outputs,
+        'model_outputs': pred
     }
 
 
