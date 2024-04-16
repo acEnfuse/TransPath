@@ -3,7 +3,7 @@ import numpy as np
 
 
 def visualize(result):
-    img = np.asarray(result['map'][0, 0].cpu().numpy())
+    img = np.asarray(result['map'][0, 0].cpu().numpy()) * 255
     img = np.repeat(img[:, :, np.newaxis], 3, axis=2)
 
     overlay = result['planner_outputs'].paths[0, 0].cpu().numpy() * 255

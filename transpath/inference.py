@@ -20,8 +20,8 @@ from PIL import Image
 
 pl.seed_everything(42)
 
-from .models.autoencoder import Autoencoder
-from .modules.planners import DifferentiableDiagAstar
+from transpath.models.autoencoder import Autoencoder
+from transpath.modules.planners import DifferentiableDiagAstar
 
 
 def parse_args():
@@ -64,6 +64,35 @@ def parse_args():
                         )
 
     return parser.parse_args()
+
+def merge_point(img: np.ndarray) -> np.ndarray:
+    """
+    Consolidate a set of points into a single point. Used for start/goal maps.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        Input image as a numpy array.
+
+    Returns
+    -------
+    img : np.ndarray
+        Image with points consolidated into one.
+
+    """
+
+    # Calculate coordinates where img == 1
+    nonzero_coords = np.argwhere(img == 1)
+    if len(nonzero_coords) > 0:
+        # Calculate average location
+        avg_location = np.mean(nonzero_coords, axis=0).astype(int)
+        
+        # Keep only one location
+        img = np.zeros_like(img)
+        img[avg_location[0], avg_location[1]] = 1
+
+    return img
+
 
 def resize_and_pad_image(image: np.ndarray, resolution: Tuple[int, int]) -> Tuple[np.ndarray, Tuple[int, int]]:
     """
@@ -151,7 +180,7 @@ def unpad_and_resize_image(image: np.ndarray, padding: Tuple[int, int], resoluti
 
     return np.asarray(resized_img)
 
-def create_input_tensor(image: np.ndarray, resolution: Tuple[int, int]) -> torch.Tensor:
+def create_input_tensor(image: np.ndarray, resolution: Tuple[int, int], point: bool = False) -> torch.Tensor:
     """
     Create a torch tensor from the input image with the specified resolution.
 
@@ -163,6 +192,9 @@ def create_input_tensor(image: np.ndarray, resolution: Tuple[int, int]) -> torch
     resolution : Tuple[int, int]
         Desired resolution (width, height).
 
+    point : bool
+        Whether input is an image with a single point (i.e. start, goal)
+
     Returns
     -------
     torch.Tensor
@@ -171,6 +203,10 @@ def create_input_tensor(image: np.ndarray, resolution: Tuple[int, int]) -> torch
     """
 
     image, _ = resize_and_pad_image(image, resolution)
+
+    if point:
+        image = merge_point(image)
+
     tensor = torch.tensor(image, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
 
     return tensor
@@ -259,9 +295,9 @@ def get_path(map: Union[str, np.ndarray],
     orig_resolution = Image.fromarray(map).size
     _, padding = resize_and_pad_image(map, img_resolution)
 
-    goal = create_input_tensor(goal, resolution = img_resolution)
-    map_design = create_input_tensor(map, resolution = img_resolution)
-    start = create_input_tensor(start, resolution = img_resolution)
+    map = create_input_tensor(map, resolution=img_resolution)
+    start = create_input_tensor(start, resolution=img_resolution, point=True)
+    goal = create_input_tensor(goal, resolution=img_resolution, point=True)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     weights = torch.load(weights_filepath, map_location = device)
@@ -271,7 +307,7 @@ def get_path(map: Union[str, np.ndarray],
     inputs = None
 
     if pathfinding_method in ['f', 'fw100']:
-        inputs = torch.cat([map_design, start + goal], dim=1)
+        inputs = torch.cat([map, start + goal], dim=1)
         model = Autoencoder(mode='f', resolution = model_resolution)
         model.load_state_dict(weights)
 
@@ -286,7 +322,7 @@ def get_path(map: Union[str, np.ndarray],
             planner = DifferentiableDiagAstar(mode=' f')
 
     elif pathfinding_method == 'cf':
-        inputs = torch.cat([map_design, goal], dim=1)
+        inputs = torch.cat([map, goal], dim=1)
         planner = DifferentiableDiagAstar(mode = 'k')
         model = Autoencoder(mode = 'k', resolution = model_resolution)
         model.load_state_dict(weights)
@@ -308,18 +344,18 @@ def get_path(map: Union[str, np.ndarray],
         if model:
             pred = (model(inputs) + 1) / 2
         else:
-            pred = (map_design == 0) * 1.
+            pred = (map == 0) * 1.
         outputs = planner(
             pred,
             start,
             goal,
-            (map_design == 0) * 1.
+            (map == 0) * 1.
         )
 
-    map_design = create_output_tensor(image=map_design.to(torch.uint8),
-                                      padding=padding,
-                                      resolution=orig_resolution
-                                      )
+    map = create_output_tensor(image=map.to(torch.uint8),
+                               padding=padding,
+                               resolution=orig_resolution
+                               )
     outputs.g = create_output_tensor(image=outputs.g.to(torch.float32),
                                      padding=padding,
                                      resolution=orig_resolution
@@ -338,7 +374,7 @@ def get_path(map: Union[str, np.ndarray],
                                 )
 
     # Get path mask
-    path_mask =  result['outputs'].paths[0, 0].cpu().numpy()
+    path_mask =  outputs.paths[0, 0].cpu().numpy()
 
     # Get the indices where the array is equal to 1
     path_indices = np.where(path_mask == 1)
@@ -348,7 +384,7 @@ def get_path(map: Union[str, np.ndarray],
 
     return {
         'path': path,
-        'map': map_design,
+        'map': map,
         'planner_outputs': outputs,
         'model_outputs': pred
     }
@@ -357,7 +393,7 @@ def get_path(map: Union[str, np.ndarray],
 if __name__ == "__main__":
     args = parse_args()
 
-    from .visualizer import visualize
+    from transpath.visualizer import visualize
 
     result = get_path(map=args.map,
                       start=args.start,
