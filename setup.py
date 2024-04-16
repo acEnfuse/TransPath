@@ -33,7 +33,7 @@ setup(
     package_data = {
         'transpath': ['weights/*.pth']
     },
-    install_requires = required_packages,
+    # install_requires = required_packages,
     classifiers = [
         'Development Status :: 4 - Production/Beta',
         'Intended Audience :: Developers',
