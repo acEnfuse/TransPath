@@ -20,9 +20,8 @@ from PIL import Image
 
 pl.seed_everything(42)
 
-from transpath.models.autoencoder import Autoencoder
-from transpath.modules.planners import DifferentiableDiagAstar
-from visualizer import visualize
+from .models.autoencoder import Autoencoder
+from .modules.planners import DifferentiableDiagAstar
 
 
 def parse_args():
@@ -357,6 +356,8 @@ def get_path(map: Union[str, np.ndarray],
 
 if __name__ == "__main__":
     args = parse_args()
+
+    from .visualizer import visualize
 
     result = get_path(map=args.map,
                       start=args.start,
