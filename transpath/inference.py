@@ -20,8 +20,8 @@ from PIL import Image
 
 pl.seed_everything(42)
 
-from transpath.models.autoencoder import Autoencoder
-from transpath.modules.planners import DifferentiableDiagAstar
+from .models.autoencoder import Autoencoder
+from .modules.planners import DifferentiableDiagAstar
 
 
 def parse_args():
@@ -86,7 +86,7 @@ def merge_point(img: np.ndarray) -> np.ndarray:
     if len(nonzero_coords) > 0:
         # Calculate average location
         avg_location = np.mean(nonzero_coords, axis=0).astype(int)
-        
+
         # Keep only one location
         img = np.zeros_like(img)
         img[avg_location[0], avg_location[1]] = 1
@@ -393,7 +393,7 @@ def get_path(map: Union[str, np.ndarray],
 if __name__ == "__main__":
     args = parse_args()
 
-    from transpath.visualizer import visualize
+    from .visualizer import visualize
 
     result = get_path(map=args.map,
                       start=args.start,
